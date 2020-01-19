@@ -2,32 +2,27 @@ require 'httparty'
 require 'json'
 require 'gtk3'
 
-class RubyApp < Gtk::Window
+class NotificationWindow < Gtk::Window
+  WIN_HEIGHT = 100
+  WIN_WIDTH = 300
+  NOTIFICATION_DURATION = 2
 
     def initialize(input)
         super
 
-        def init_ui(input)
+        signal_connect("destroy") {Gtk.main_quit}
 
-          signal_connect "destroy" do
-              Gtk.main_quit
-          end
-          set_title "nope"
-          set_default_size 400, 400
-          set_window_position Gtk::WindowPosition::CENTER
-          set_border_width 10
+        set_decorated(false)
+        set_default_size WIN_WIDTH, WIN_HEIGHT
+        set_window_position Gtk::WindowPosition::CENTER
+        set_border_width 10
+        add Gtk::Label.new input
 
-          label = Gtk::Label.new input
-          add label
-        end
-
-        init_ui(input)
-
-        show
+        show_all
     end
 end
 
-  window = RubyApp.new("AAAAAAAAAAAAaaaaaa")
+  window = NotificationWindow.new("Label Message")
   Gtk.main
 
 def checkGameChange(broadcasters, broadcasters2)
