@@ -1,8 +1,49 @@
 require 'httparty'
 require 'json'
+require 'gtk3'
 
-def checkGameChange(broadcaster_ids)
+class RubyApp < Gtk::Window
 
+    def initialize(input)
+        super
+
+        def init_ui(input)
+
+          signal_connect "destroy" do
+              Gtk.main_quit
+          end
+          set_title "nope"
+          set_default_size 400, 400
+          set_window_position Gtk::WindowPosition::CENTER
+          set_border_width 10
+
+          label = Gtk::Label.new input
+          add label
+        end
+
+        init_ui(input)
+
+        show
+    end
+end
+
+  window = RubyApp.new("AAAAAAAAAAAAaaaaaa")
+  Gtk.main
+
+def checkGameChange(broadcasters, broadcasters2)
+  broadcasters2.each do |streamer, game|
+    if(broadcasters.key?(streamer))
+      if(broadcasters[streamer] != broadcasters2[streamer])
+        # Game change
+        label = "#{streamer} is now playing #{broadcasters2[streamer]}"
+        # HANDLE GUI NOTIFICATION
+      end
+    else
+      # Streamer went live
+      label = "#{streamer} went live. Currently playing #{broadcasters2[streamer]}"
+      # HANDLE HUI NOTIFICATION
+    end
+  end
 end
 
 def getGameNames(followed_users, base_url, headers)
@@ -32,49 +73,57 @@ user_response = HTTParty.get(base_url + "users?login=#{username}", headers: head
 user_data = user_response['data']
 user_id = user_data.first['id']
 
-
-response = HTTParty.get(base_url + "users/follows?from_id=#{user_id}&first=100", headers: headers)
-
-followed_users = response['data']
-
-broadcaster_ids = []
-live_broadcaster_ids = []
-
-followed_users.each do |user|
-  broadcaster_ids <<  user['to_id']
-end
-
-request_string = "streams?"
-
-broadcaster_ids.each do |broadcaster|
-  request_string += "user_id=#{broadcaster}&"
-end
-
 broadcasters = { }
+broadcasters2 = { }
 
-request_string.chomp('&')
+while true
+  response = HTTParty.get(base_url + "users/follows?from_id=#{user_id}&first=100", headers: headers)
 
-followed_users_response = HTTParty.get(base_url + request_string, headers: headers)
+  followed_users = response['data']
 
-game_names = getGameNames(followed_users_response['data'], base_url, headers)
+  broadcaster_ids = []
+  live_broadcaster_ids = []
 
-followed_users_response['data'].each do |stream|
-  game_name = ""
-  if stream['type'] == 'live'
-    game_names.each do |game|
-      if stream['game_id'] == game['id']
-        game_name = game['name']
-      end
-    end
-    broadcasters[stream['user_name']] = game_name
+  followed_users.each do |user|
+    broadcaster_ids <<  user['to_id']
   end
+
+  request_string = "streams?"
+
+  broadcaster_ids.each do |broadcaster|
+    request_string += "user_id=#{broadcaster}&"
+  end
+
+
+
+  request_string.chomp('&')
+
+  followed_users_response = HTTParty.get(base_url + request_string, headers: headers)
+
+  game_names = getGameNames(followed_users_response['data'], base_url, headers)
+
+  followed_users_response['data'].each do |stream|
+    game_name = ""
+    if stream['type'] == 'live'
+      game_names.each do |game|
+        if stream['game_id'] == game['id']
+          game_name = game['name']
+        end
+      end
+      broadcasters2[stream['user_name']] = game_name
+    end
+  end
+
+  # FIRST INITIALIZATION OF BROADCASTERS
+  if broadcasters.empty?
+    broadcasters = broadcasters2
+  end
+
+  checkGameChange(broadcasters, broadcasters2)
+  broadcasters = broadcasters2
+  broadcasters2 = {}
+
+
+  #puts broadcasters
+  sleep 60
 end
-
-#puts followed_users_response['data']
-puts broadcasters
-
-#while true
-  # CALL MAIN REQUESTS broadcasters1
-  # 2 MIN LATER CALL AGAIN broadcasters2
-  # CHECK FOR CHANGED GAMES
-#end
